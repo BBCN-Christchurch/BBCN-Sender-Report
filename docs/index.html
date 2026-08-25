@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Email Marketing Performance Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #FFFFFF;
+    --bg: #F4F5F7;
+    --ink: #16233D;
+    --ink-soft: #5B6578;
+    --line: #DCE1E8;
+    --navy: #1F3A5F;
+    --navy-soft: #EAF0F6;
+    --burgundy: #8B3A3A;
+    --burgundy-soft: #F5E9E9;
+    --gold: #B08D3E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-size: 14.5px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 860px;
+    margin: 40px auto 80px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow: 0 1px 3px rgba(22,35,61,0.06);
+  }
+
+  .masthead {
+    padding: 44px 56px 28px;
+    border-bottom: 3px solid var(--navy);
+  }
+  .masthead-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .masthead h1 {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+    font-size: 30px;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+  .masthead .sub {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-bottom: 20px;
+  }
+  .meta-row {
+    display: flex;
+    gap: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .meta-item .meta-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+    margin-bottom: 3px;
+  }
+  .meta-item .meta-value {
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .body { padding: 8px 56px 48px; }
+
+  .section { margin-top: 40px; }
+  .section-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
+    margin-bottom: 18px;
+  }
+  .section-num {
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    color: var(--gold);
+    font-weight: 600;
+  }
+  .section-heading h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .exec-summary {
+    background: var(--navy-soft);
+    border-left: 3px solid var(--navy);
+    padding: 20px 24px;
+    margin-top: 40px;
+  }
+  .exec-summary h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 17px;
+    margin: 0 0 12px;
+  }
+  .exec-summary ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+  .exec-summary li {
+    margin-bottom: 10px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .exec-summary li:last-child { margin-bottom: 0; }
+
+  .report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  .report-table td {
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .report-table tr:nth-child(even) td { background: #FAFBFC; }
+  .report-table td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .campaign-subject {
+    font-family: 'Source Serif 4', serif;
+    font-size: 16px;
+    font-style: italic;
+    color: var(--ink-soft);
+    margin: -4px 0 16px;
+  }
+
+  .chart-wrap { margin-top: 8px; }
+  .chart-wrap svg { width: 100%; height: auto; display: block; }
+  .chart-legend {
+    display: flex;
+    gap: 24px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .chart-legend .sw {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .sw.new { background: var(--navy); }
+  .sw.unsub { background: var(--burgundy); }
+
+  footer.report-footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media (max-width: 640px) {
+    .masthead, .body { padding-left: 24px; padding-right: 24px; }
+    .meta-row { flex-direction: column; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="masthead">
+      <div class="masthead-label">Monthly Performance Report</div>
+      <h1>Email Marketing Performance</h1>
+      <div class="sub">Sender.net Account Summary</div>
+      <div class="meta-row">
+        <div class="meta-item">
+          <div class="meta-label">Report date</div>
+          <div class="meta-value">24 August 2026</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Period covered</div>
+          <div class="meta-value">25 Jul 2026 – 24 August 2026</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Generated</div>
+          <div class="meta-value">01:18 UTC</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="body">
+
+      <div class="exec-summary">
+        <h2>Executive Summary</h2>
+        <ul>
+          <li>The subscriber base totals <b>6,432</b>, a net growth of <b>+1,730</b> over the trailing twelve months (2,140 joined, 410 unsubscribed).</li><li>In the current reporting period (since 25 Jul 2026), net subscriber change was <b>+164</b> (187 joined, 23 unsubscribed).</li><li>The most recent campaign, &ldquo;August Product Update & New Features&rdquo;, was sent to <b>4,791</b> recipients on 14 Aug 2026, 09:00, achieving a <b>41.7%</b> unique open rate and a <b>1.8%</b> bounce rate, within a healthy deliverability range.</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-heading">
+          <span class="section-num">1.</span>
+          <h2>Campaign Performance</h2>
+        </div>
+        <div class="campaign-subject">&ldquo;August Product Update & New Features&rdquo; — sent 14 Aug 2026, 09:00</div>
+        <table class="report-table"><tbody><tr><td>Recipients</td><td class="num">4,820</td></tr>
+<tr><td>Sends</td><td class="num">4,791</td></tr>
+<tr><td>Delivered</td><td class="num">4,707</td></tr>
+<tr><td>Bounces</td><td class="num">84 (1.8%)</td></tr>
+<tr><td>Unique opens</td><td class="num">1,962 (41.7%)</td></tr></tbody></table>
+      </div>
+
+      <div class="section">
+        <div class="section-heading">
+          <span class="section-num">2.</span>
+          <h2>Subscriber Growth</h2>
+        </div>
+        <table class="report-table"><tbody><tr><td>Total subscribers</td><td class="num">6,432</td></tr>
+<tr><td>New — this period (since 25 Jul 2026)</td><td class="num">187</td></tr>
+<tr><td>Unsubscribed — this period (since 25 Jul 2026)</td><td class="num">23</td></tr>
+<tr><td>Net change — this period</td><td class="num">+164</td></tr>
+<tr><td>New — last 12 months (since 24 Aug 2025)</td><td class="num">2,140</td></tr>
+<tr><td>Unsubscribed — last 12 months (since 24 Aug 2025)</td><td class="num">410</td></tr>
+<tr><td>Net change — last 12 months</td><td class="num">+1,730</td></tr></tbody></table>
+
+        <div class="chart-wrap">
+          
+    <svg viewBox="0 0 640 300" role="img" aria-label="New subscribers versus unsubscribes, this period and last 12 months">
+      <line x1="56" y1="248.0" x2="616" y2="248.0" stroke="#DCE1E8" stroke-width="1" /><text x="46" y="252.0" text-anchor="end" font-size="11" fill="#6B7688" font-family="Inter, sans-serif">0</text><line x1="56" y1="192.0" x2="616" y2="192.0" stroke="#DCE1E8" stroke-width="1" /><text x="46" y="196.0" text-anchor="end" font-size="11" fill="#6B7688" font-family="Inter, sans-serif">750</text><line x1="56" y1="136.0" x2="616" y2="136.0" stroke="#DCE1E8" stroke-width="1" /><text x="46" y="140.0" text-anchor="end" font-size="11" fill="#6B7688" font-family="Inter, sans-serif">1,500</text><line x1="56" y1="80.0" x2="616" y2="80.0" stroke="#DCE1E8" stroke-width="1" /><text x="46" y="84.0" text-anchor="end" font-size="11" fill="#6B7688" font-family="Inter, sans-serif">2,250</text><line x1="56" y1="24.0" x2="616" y2="24.0" stroke="#DCE1E8" stroke-width="1" /><text x="46" y="28.0" text-anchor="end" font-size="11" fill="#6B7688" font-family="Inter, sans-serif">3,000</text>
+      <line x1="56" y1="248.0" x2="616" y2="248.0" stroke="#16233D" stroke-width="1.4" />
+      <rect x="112.0" y="234.0" width="72.8" height="14.0" fill="#1F3A5F" rx="2" /><text x="148.4" y="226.0" text-anchor="middle" font-size="12" font-weight="600" fill="#1F3A5F" font-family="Inter, sans-serif">187</text><rect x="207.2" y="246.3" width="72.8" height="1.7" fill="#8B3A3A" rx="2" /><text x="243.6" y="238.3" text-anchor="middle" font-size="12" font-weight="600" fill="#8B3A3A" font-family="Inter, sans-serif">23</text><rect x="392.0" y="88.2" width="72.8" height="159.8" fill="#1F3A5F" rx="2" /><text x="428.4" y="80.2" text-anchor="middle" font-size="12" font-weight="600" fill="#1F3A5F" font-family="Inter, sans-serif">2,140</text><rect x="487.2" y="217.4" width="72.8" height="30.6" fill="#8B3A3A" rx="2" /><text x="523.6" y="209.4" text-anchor="middle" font-size="12" font-weight="600" fill="#8B3A3A" font-family="Inter, sans-serif">410</text>
+      <text x="196.0" y="274.0" text-anchor="middle" font-size="12.5" fill="#16233D" font-family="Source Serif 4, serif">This period</text><text x="476.0" y="274.0" text-anchor="middle" font-size="12.5" fill="#16233D" font-family="Source Serif 4, serif">Last 12 months</text>
+    </svg>
+    
+          <div class="chart-legend">
+            <span><i class="sw new"></i>New subscribers</span>
+            <span><i class="sw unsub"></i>Unsubscribed</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="report-footer">
+        <span>Prepared automatically from the Sender.net API</span>
+        <span>No individual subscriber data included</span>
+      </footer>
+
+    </div>
+  </div>
+</body>
+</html>
