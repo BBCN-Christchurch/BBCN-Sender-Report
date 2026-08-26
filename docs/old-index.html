@@ -147,41 +147,16 @@
     margin: -4px 0 16px;
   }
 
-  .chart-wrap { margin-top: 20px; }
-  .hbar-row { margin-bottom: 22px; }
-  .hbar-row:last-child { margin-bottom: 0; }
-  .hbar-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 8px;
-  }
-  .hbar-label {
-    font-family: 'Source Serif 4', serif;
-    font-size: 14px;
-    font-weight: 600;
-  }
-  .hbar-range {
-    font-size: 11.5px;
-    color: var(--ink-soft);
-  }
-  .hbar-track {
-    display: flex;
-    height: 14px;
-    border-radius: 3px;
-    overflow: hidden;
-    background: var(--line);
-  }
-  .hbar-seg.new { background: var(--navy); }
-  .hbar-seg.unsub { background: var(--burgundy); }
-  .hbar-legend {
+  .chart-wrap { margin-top: 8px; }
+  .chart-wrap svg { width: 100%; height: auto; display: block; }
+  .chart-legend {
     display: flex;
     gap: 24px;
-    margin-top: 8px;
+    margin-top: 10px;
     font-size: 12px;
     color: var(--ink-soft);
   }
-  .sw {
+  .chart-legend .sw {
     display: inline-block;
     width: 10px; height: 10px;
     border-radius: 2px;
@@ -225,7 +200,7 @@
         </div>
         <div class="meta-item">
           <div class="meta-label">Generated</div>
-          <div class="meta-value">01:26 UTC</div>
+          <div class="meta-value">01:18 UTC</div>
         </div>
       </div>
     </div>
@@ -267,36 +242,17 @@
 
         <div class="chart-wrap">
           
-    <div class="hbar-row">
-      <div class="hbar-head">
-        <span class="hbar-label">This period</span>
-        <span class="hbar-range">since 25 Jul 2026</span>
-      </div>
-      <div class="hbar-track">
-        <div class="hbar-seg new" style="width:89.0%"></div>
-        <div class="hbar-seg unsub" style="width:11.0%"></div>
-      </div>
-      <div class="hbar-legend">
-        <span><i class="sw new"></i>New 187</span>
-        <span><i class="sw unsub"></i>Unsubscribed 23</span>
-      </div>
-    </div>
+    <svg viewBox="0 0 640 300" role="img" aria-label="New subscribers versus unsubscribes, this period and last 12 months">
+      <line x1="56" y1="248.0" x2="616" y2="248.0" stroke="#DCE1E8" stroke-width="1" /><text x="46" y="252.0" text-anchor="end" font-size="11" fill="#6B7688" font-family="Inter, sans-serif">0</text><line x1="56" y1="192.0" x2="616" y2="192.0" stroke="#DCE1E8" stroke-width="1" /><text x="46" y="196.0" text-anchor="end" font-size="11" fill="#6B7688" font-family="Inter, sans-serif">750</text><line x1="56" y1="136.0" x2="616" y2="136.0" stroke="#DCE1E8" stroke-width="1" /><text x="46" y="140.0" text-anchor="end" font-size="11" fill="#6B7688" font-family="Inter, sans-serif">1,500</text><line x1="56" y1="80.0" x2="616" y2="80.0" stroke="#DCE1E8" stroke-width="1" /><text x="46" y="84.0" text-anchor="end" font-size="11" fill="#6B7688" font-family="Inter, sans-serif">2,250</text><line x1="56" y1="24.0" x2="616" y2="24.0" stroke="#DCE1E8" stroke-width="1" /><text x="46" y="28.0" text-anchor="end" font-size="11" fill="#6B7688" font-family="Inter, sans-serif">3,000</text>
+      <line x1="56" y1="248.0" x2="616" y2="248.0" stroke="#16233D" stroke-width="1.4" />
+      <rect x="112.0" y="234.0" width="72.8" height="14.0" fill="#1F3A5F" rx="2" /><text x="148.4" y="226.0" text-anchor="middle" font-size="12" font-weight="600" fill="#1F3A5F" font-family="Inter, sans-serif">187</text><rect x="207.2" y="246.3" width="72.8" height="1.7" fill="#8B3A3A" rx="2" /><text x="243.6" y="238.3" text-anchor="middle" font-size="12" font-weight="600" fill="#8B3A3A" font-family="Inter, sans-serif">23</text><rect x="392.0" y="88.2" width="72.8" height="159.8" fill="#1F3A5F" rx="2" /><text x="428.4" y="80.2" text-anchor="middle" font-size="12" font-weight="600" fill="#1F3A5F" font-family="Inter, sans-serif">2,140</text><rect x="487.2" y="217.4" width="72.8" height="30.6" fill="#8B3A3A" rx="2" /><text x="523.6" y="209.4" text-anchor="middle" font-size="12" font-weight="600" fill="#8B3A3A" font-family="Inter, sans-serif">410</text>
+      <text x="196.0" y="274.0" text-anchor="middle" font-size="12.5" fill="#16233D" font-family="Source Serif 4, serif">This period</text><text x="476.0" y="274.0" text-anchor="middle" font-size="12.5" fill="#16233D" font-family="Source Serif 4, serif">Last 12 months</text>
+    </svg>
     
-    <div class="hbar-row">
-      <div class="hbar-head">
-        <span class="hbar-label">Last 12 months</span>
-        <span class="hbar-range">since 24 Aug 2025</span>
-      </div>
-      <div class="hbar-track">
-        <div class="hbar-seg new" style="width:83.9%"></div>
-        <div class="hbar-seg unsub" style="width:16.099999999999994%"></div>
-      </div>
-      <div class="hbar-legend">
-        <span><i class="sw new"></i>New 2,140</span>
-        <span><i class="sw unsub"></i>Unsubscribed 410</span>
-      </div>
-    </div>
-    
+          <div class="chart-legend">
+            <span><i class="sw new"></i>New subscribers</span>
+            <span><i class="sw unsub"></i>Unsubscribed</span>
+          </div>
         </div>
       </div>
 
