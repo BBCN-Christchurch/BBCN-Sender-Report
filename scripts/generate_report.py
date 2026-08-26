@@ -2,128 +2,18 @@
 """
 Sender.net Report Generator
 ----------------------------
-Pulls the latest campaign performance and subscriber growth from the
-Sender.net API and renders a single self-contained HTML page.
-
-Designed to run two ways:
-
-1. Locally, for testing/previewing (python scripts/generate_report.py --sample)
-2. On a schedule via GitHub Actions, which calls this with a real token
-   supplied as a repository secret (never committed to the repo) and
-   commits the resulting docs/index.html, which GitHub Pages then serves.
-
-No token is ever written into the generated HTML.
+Reads campaign performance and subscriber growth logs from local CSV files
+and renders them into a single self-contained HTML page (docs/index.html).
 """
 
 import argparse
-import json
-import os
+import csv
 import sys
-import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-import requests
-
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
-
-BASE_URL = "https://api.sender.net/v2"
 DATE_FMT = "%Y-%m-%d %H:%M:%S"
-DEFAULT_LOOKBACK_DAYS = 30
 ANNUAL_DAYS = 365
-
-
-# --------------------------------------------------------------------------
-# API client
-# --------------------------------------------------------------------------
-
-class SenderAPIError(RuntimeError):
-    pass
-
-
-class SenderClient:
-    def __init__(self, token: str):
-        if not token:
-            raise SenderAPIError(
-                "No API token found. Set SENDER_API_TOKEN as an environment "
-                "variable (locally via .env, or as a GitHub Actions secret)."
-            )
-        self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        })
-
-    def _get(self, path: str, params: dict | None = None) -> dict:
-        url = f"{BASE_URL}{path}"
-        for attempt in range(5):
-            resp = self.session.get(url, params=params, timeout=30)
-            if resp.status_code == 429:
-                wait = int(resp.headers.get("Retry-After", 5))
-                print(f"  Rate limited, waiting {wait}s...", file=sys.stderr)
-                time.sleep(wait)
-                continue
-            if resp.status_code >= 500:
-                wait = 2 ** attempt
-                print(f"  Server error {resp.status_code}, retrying in {wait}s...", file=sys.stderr)
-                time.sleep(wait)
-                continue
-            if not resp.ok:
-                raise SenderAPIError(f"GET {path} failed: {resp.status_code} {resp.text[:300]}")
-            return resp.json()
-        raise SenderAPIError(f"GET {path} failed after retries")
-
-    def paginate(self, path: str, params: dict | None = None, max_pages: int = 500):
-        params = dict(params or {})
-        page = 1
-        while page <= max_pages:
-            params["page"] = page
-            payload = self._get(path, params=params)
-            data = payload.get("data", [])
-            if isinstance(data, dict):
-                data = [data]
-            meta = payload.get("meta", {})
-            yield data, meta
-            last_page = meta.get("last_page", page)
-            if not data or page >= last_page:
-                return
-            page += 1
-
-    def get_campaigns(self, status: str | None = None, max_pages: int = 20):
-        params = {"limit": 100}
-        if status:
-            params["status"] = status
-        campaigns = []
-        for data, _ in self.paginate("/campaigns", params=params, max_pages=max_pages):
-            campaigns.extend(data)
-        return campaigns
-
-    def get_campaign_detail(self, campaign_id: str) -> dict:
-        payload = self._get(f"/campaigns/{campaign_id}")
-        return payload.get("data", {})
-
-    def get_unique_opens(self, campaign_id: str) -> int:
-        seen = set()
-        for data, _ in self.paginate(f"/campaigns/{campaign_id}/opens", max_pages=500):
-            for row in data:
-                rid = row.get("recipient_id") or row.get("email")
-                if rid:
-                    seen.add(rid)
-        return len(seen)
-
-    def get_all_subscribers(self, max_pages: int = 1000):
-        subscribers = []
-        total = None
-        for data, meta in self.paginate("/subscribers", params={"limit": 1000}, max_pages=max_pages):
-            subscribers.extend(data)
-            if total is None:
-                total = meta.get("total")
-        return subscribers, total
 
 
 # --------------------------------------------------------------------------
@@ -143,132 +33,6 @@ def parse_dt(value):
             continue
     return None
 
-
-def load_last_run(state_file: Path):
-    if state_file.exists():
-        try:
-            state = json.loads(state_file.read_text())
-            return parse_dt(state.get("last_run"))
-        except (json.JSONDecodeError, KeyError):
-            return None
-    return None
-
-
-def save_last_run(state_file: Path, when: datetime):
-    state_file.parent.mkdir(parents=True, exist_ok=True)
-    state_file.write_text(json.dumps({"last_run": when.strftime(DATE_FMT)}, indent=2))
-
-
-# --------------------------------------------------------------------------
-# Data assembly
-# --------------------------------------------------------------------------
-
-def get_latest_sent_campaign(client: SenderClient):
-    campaigns = client.get_campaigns(status="SENT")
-    if not campaigns:
-        return None
-    campaigns.sort(key=lambda c: c.get("sent_time") or c.get("modified") or "", reverse=True)
-    latest = campaigns[0]
-    detail = client.get_campaign_detail(latest["id"])
-    return detail or latest
-
-
-def build_campaign_summary(client: SenderClient, campaign: dict) -> dict:
-    sent_count = campaign.get("sent_count", 0) or 0
-    recipient_count = campaign.get("recipient_count", 0) or 0
-    bounces = campaign.get("bounces_count", 0) or 0
-    delivered = max(sent_count - bounces, 0)
-
-    unique_opens = campaign.get("opens", 0) or 0
-    try:
-        unique_opens = client.get_unique_opens(campaign["id"])
-    except SenderAPIError as exc:
-        print(f"  Warning: could not fetch unique opens ({exc}); using campaign totals field instead.", file=sys.stderr)
-
-    open_rate = (unique_opens / delivered * 100) if delivered else 0
-    bounce_rate = (bounces / sent_count * 100) if sent_count else 0
-
-    return {
-        "subject": campaign.get("subject") or campaign.get("title") or "(untitled campaign)",
-        "sent_time": campaign.get("sent_time"),
-        "recipient_count": recipient_count,
-        "sent_count": sent_count,
-        "delivered": delivered,
-        "bounces": bounces,
-        "unique_opens": unique_opens,
-        "clicks": campaign.get("clicks", 0) or 0,
-        "open_rate": round(open_rate, 1),
-        "bounce_rate": round(bounce_rate, 1),
-    }
-
-
-def _count_window(subscribers, since: datetime):
-    new_count = 0
-    unsub_count = 0
-    for sub in subscribers:
-        created = parse_dt(sub.get("created"))
-        if created and created >= since:
-            new_count += 1
-
-        status = sub.get("status", {})
-        email_status = status.get("email") if isinstance(status, dict) else status
-        unsub_at = parse_dt(sub.get("unsubscribed_at"))
-        if email_status == "unsubscribed" and unsub_at and unsub_at >= since:
-            unsub_count += 1
-    return new_count, unsub_count
-
-
-def build_subscriber_summary(client: SenderClient, period_since: datetime, annual_since: datetime) -> dict:
-    subscribers, total = client.get_all_subscribers()
-    if total is None:
-        total = len(subscribers)
-
-    period_new, period_unsub = _count_window(subscribers, period_since)
-    annual_new, annual_unsub = _count_window(subscribers, annual_since)
-
-    return {
-        "total_subscribers": total,
-        "period_new": period_new,
-        "period_unsub": period_unsub,
-        "period_net": period_new - period_unsub,
-        "annual_new": annual_new,
-        "annual_unsub": annual_unsub,
-        "annual_net": annual_new - annual_unsub,
-    }
-
-
-# --------------------------------------------------------------------------
-# Sample data (no API calls -- for previewing the design)
-# --------------------------------------------------------------------------
-
-def sample_data():
-    campaign = {
-        "subject": "August Product Update & New Features",
-        "sent_time": "2026-08-14 09:00:00",
-        "recipient_count": 4820,
-        "sent_count": 4791,
-        "delivered": 4707,
-        "bounces": 84,
-        "unique_opens": 1962,
-        "clicks": 431,
-        "open_rate": 41.7,
-        "bounce_rate": 1.8,
-    }
-    subs = {
-        "total_subscribers": 6432,
-        "period_new": 187,
-        "period_unsub": 23,
-        "period_net": 164,
-        "annual_new": 2140,
-        "annual_unsub": 410,
-        "annual_net": 1730,
-    }
-    return campaign, subs
-
-
-# --------------------------------------------------------------------------
-# HTML rendering
-# --------------------------------------------------------------------------
 
 def fmt_num(n) -> str:
     try:
@@ -301,6 +65,95 @@ def net_commentary(net: int) -> str:
         return "net decline"
     return "no net change"
 
+
+# --------------------------------------------------------------------------
+# CSV loaders
+# --------------------------------------------------------------------------
+
+def load_latest_campaign(csv_path: Path) -> dict | None:
+    if not csv_path.exists() or csv_path.stat().st_size == 0:
+        return None
+    try:
+        with open(csv_path, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            if rows:
+                latest = rows[-1]
+                return {
+                    "subject": latest.get("subject", "(untitled campaign)"),
+                    "sent_time": latest.get("sent_time"),
+                    "recipient_count": int(latest.get("recipient_count", 0)),
+                    "sent_count": int(latest.get("sent_count", 0)),
+                    "delivered": int(latest.get("delivered", 0)),
+                    "bounces": int(latest.get("bounces", 0)),
+                    "unique_opens": int(latest.get("unique_opens", 0)),
+                    "clicks": int(latest.get("clicks", 0)),
+                    "open_rate": float(latest.get("open_rate", 0)),
+                    "bounce_rate": float(latest.get("bounce_rate", 0))
+                }
+    except Exception as e:
+        print(f"Error reading campaign from CSV: {e}", file=sys.stderr)
+    return None
+
+
+def load_latest_subscribers(csv_path: Path) -> tuple[dict, datetime, datetime] | None:
+    if not csv_path.exists() or csv_path.stat().st_size == 0:
+        return None
+    try:
+        with open(csv_path, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            if rows:
+                latest = rows[-1]
+                subs = {
+                    "total_subscribers": int(latest.get("total_subscribers", 0)),
+                    "period_new": int(latest.get("period_new", 0)),
+                    "period_unsub": int(latest.get("period_unsub", 0)),
+                    "period_net": int(latest.get("period_net", 0)),
+                    "annual_new": int(latest.get("annual_new", 0)),
+                    "annual_unsub": int(latest.get("annual_unsub", 0)),
+                    "annual_net": int(latest.get("annual_net", 0))
+                }
+                period_since = parse_dt(latest.get("period_since")) or (datetime.now(timezone.utc) - timedelta(days=30))
+                annual_since = parse_dt(latest.get("annual_since")) or (datetime.now(timezone.utc) - timedelta(days=365))
+                return subs, period_since, annual_since
+    except Exception as e:
+        print(f"Error reading subscribers from CSV: {e}", file=sys.stderr)
+    return None
+
+
+# --------------------------------------------------------------------------
+# Sample data (no CSV -- fallback for previewing the design)
+# --------------------------------------------------------------------------
+
+def sample_data():
+    campaign = {
+        "subject": "August Product Update & New Features",
+        "sent_time": "2026-08-14 09:00:00",
+        "recipient_count": 4820,
+        "sent_count": 4791,
+        "delivered": 4707,
+        "bounces": 84,
+        "unique_opens": 1962,
+        "clicks": 431,
+        "open_rate": 41.7,
+        "bounce_rate": 1.8,
+    }
+    subs = {
+        "total_subscribers": 6432,
+        "period_new": 187,
+        "period_unsub": 23,
+        "period_net": 164,
+        "annual_new": 2140,
+        "annual_unsub": 410,
+        "annual_net": 1730,
+    }
+    return campaign, subs
+
+
+# --------------------------------------------------------------------------
+# HTML rendering
+# --------------------------------------------------------------------------
 
 def render_bar_chart(period_new, period_unsub, annual_new, annual_unsub, period_since: datetime, annual_since: datetime) -> str:
     """Server-rendered horizontal stacked bar chart."""
@@ -423,85 +276,97 @@ def render_html(campaign: dict, subs: dict, period_since: datetime, annual_since
     --burgundy-soft: #F5E9E9;
     --gold: #B08D3E;
   }}
-  * {{ box-sizing: border-box; }}
+
   body {{
-    margin: 0;
     background: var(--bg);
     color: var(--ink);
     font-family: 'Inter', sans-serif;
-    font-size: 14.5px;
+    margin: 0;
+    padding: 40px 20px;
     -webkit-font-smoothing: antialiased;
   }}
+
   .page {{
-    max-width: 860px;
-    margin: 40px auto 80px;
     background: var(--paper);
-    border: 1px solid var(--line);
-    box-shadow: 0 1px 3px rgba(22,35,61,0.06);
+    max-width: 680px;
+    margin: 0 auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
   }}
 
   .masthead {{
-    padding: 44px 56px 28px;
-    border-bottom: 3px solid var(--navy);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 40px 48px 36px;
   }}
   .masthead-label {{
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.16em;
-    color: var(--gold);
+    letter-spacing: 1.5px;
     font-weight: 600;
-    margin-bottom: 10px;
+    color: var(--gold);
+    margin-bottom: 12px;
   }}
   .masthead h1 {{
     font-family: 'Source Serif 4', serif;
-    font-weight: 600;
-    font-size: 30px;
-    margin: 0 0 6px;
-    color: var(--ink);
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    line-height: 1.15;
   }}
   .masthead .sub {{
     font-size: 14px;
-    color: var(--ink-soft);
-    margin-bottom: 20px;
+    color: #A2ADB9;
+    margin-bottom: 28px;
   }}
+
   .meta-row {{
     display: flex;
     gap: 40px;
-    padding-top: 16px;
-    border-top: 1px solid var(--line);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding-top: 24px;
   }}
-  .meta-item .meta-label {{
-    font-size: 10.5px;
+  .meta-item {{
+    flex: 1;
+  }}
+  .meta-label {{
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ink-soft);
-    margin-bottom: 3px;
+    letter-spacing: 1px;
+    color: #A2ADB9;
+    margin-bottom: 4px;
   }}
-  .meta-item .meta-value {{
-    font-size: 13.5px;
-    font-weight: 600;
+  .meta-value {{
+    font-size: 14px;
+    font-weight: 500;
   }}
 
-  .body {{ padding: 8px 56px 48px; }}
+  .body {{
+    padding: 8px 48px 48px;
+  }}
 
-  .section {{ margin-top: 40px; }}
+  .section {{
+    margin-top: 40px;
+  }}
   .section-heading {{
     display: flex;
     align-items: baseline;
-    gap: 10px;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 10px;
-    margin-bottom: 18px;
-  }}
-  .section-num {{
-    font-family: 'Source Serif 4', serif;
-    font-size: 15px;
-    color: var(--gold);
-    font-weight: 600;
+    gap: 8px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 8px;
+    margin-bottom: 16px;
   }}
   .section-heading h2 {{
     font-family: 'Source Serif 4', serif;
-    font-size: 19px;
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+  }}
+  .section-num {{
+    font-family: 'Source Serif 4', serif;
+    font-size: 18px;
+    color: var(--gold);
     font-weight: 600;
     margin: 0;
   }}
@@ -681,55 +546,46 @@ def render_html(campaign: dict, subs: dict, period_since: datetime, annual_since
 # --------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate a Sender.net performance report page.")
-    parser.add_argument("--days", type=int, default=None,
-                         help="Force the period lookback window in days, overriding since-last-run.")
-    parser.add_argument("--annual-days", type=int, default=ANNUAL_DAYS,
-                         help="Lookback window in days for the annual comparison (default 365).")
+    parser = argparse.ArgumentParser(description="Generate a Sender.net performance report page from CSV data.")
+    parser.add_argument("--data-dir", type=str, default="data",
+                         help="Directory containing the source CSV files.")
     parser.add_argument("--output-dir", type=str, default="docs",
-                         help="Directory to write index.html into (docs/ is the GitHub Pages convention).")
-    parser.add_argument("--state-dir", type=str, default=".state",
-                         help="Directory used to remember the last run date between scheduled runs.")
+                         help="Directory to write index.html into.")
     parser.add_argument("--sample", action="store_true",
-                         help="Generate the page from sample data, without calling the API.")
+                         help="Generate the page from sample data, without reading CSVs.")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    state_file = Path(args.state_dir) / "last_run.json"
-
-    now = datetime.now(timezone.utc)
-    annual_since = now - timedelta(days=args.annual_days)
-
-    if args.days:
-        period_since = now - timedelta(days=args.days)
-    else:
-        period_since = load_last_run(state_file) or (now - timedelta(days=DEFAULT_LOOKBACK_DAYS))
+    data_dir = Path(args.data_dir)
 
     if args.sample:
-        print("Generating page from SAMPLE data (no API calls made)...")
+        print("Generating page from SAMPLE data...")
         campaign_summary, subs_summary = sample_data()
+        now = datetime.now(timezone.utc)
+        period_since = now - timedelta(days=30)
+        annual_since = now - timedelta(days=365)
     else:
-        token = os.environ.get("SENDER_API_TOKEN", "").strip()
-        client = SenderClient(token)
+        campaigns_file = data_dir / "campaigns.csv"
+        subscribers_file = data_dir / "subscribers.csv"
 
-        print("Fetching latest sent campaign...")
-        latest = get_latest_sent_campaign(client)
-        if not latest:
-            print("No sent campaigns found on this account.", file=sys.stderr)
+        if not campaigns_file.exists() or not subscribers_file.exists():
+            print(f"Error: CSV data files not found in {data_dir}. Run scripts/fetch_data.py first, or run with --sample.", file=sys.stderr)
             sys.exit(1)
-        campaign_summary = build_campaign_summary(client, latest)
 
-        print(f"Fetching subscriber data (period since {period_since.date()}, annual since {annual_since.date()})...")
-        subs_summary = build_subscriber_summary(client, period_since, annual_since)
+        campaign_summary = load_latest_campaign(campaigns_file)
+        res = load_latest_subscribers(subscribers_file)
+        if not campaign_summary or not res:
+            print("Error: Could not load data from CSV files. Ensure they are populated.", file=sys.stderr)
+            sys.exit(1)
+
+        subs_summary, period_since, annual_since = res
+        now = datetime.now(timezone.utc)
 
     html = render_html(campaign_summary, subs_summary, period_since, annual_since, now)
 
     out_path = output_dir / "index.html"
     out_path.write_text(html, encoding="utf-8")
-
-    if not args.sample:
-        save_last_run(state_file, now)
 
     print(f"\nPage written to: {out_path}")
 

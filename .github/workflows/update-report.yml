@@ -28,15 +28,18 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Generate report
+      - name: Fetch latest data
         env:
           SENDER_API_TOKEN: ${{ secrets.SENDER_API_TOKEN }}
-        run: python scripts/generate_report.py --output-dir docs --state-dir .state
+        run: python scripts/fetch_data.py --data-dir data
 
-      - name: Commit and push updated report
+      - name: Generate report
+        run: python scripts/generate_report.py --data-dir data --output-dir docs
+
+      - name: Commit and push updated report and CSV data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/index.html .state/last_run.json
-          git diff --staged --quiet || git commit -m "Update Sender.net report [automated]"
+          git add docs/index.html data/*.csv
+          git diff --staged --quiet || git commit -m "Update report data and CSV log [automated]"
           git push

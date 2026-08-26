@@ -19,85 +19,97 @@
     --burgundy-soft: #F5E9E9;
     --gold: #B08D3E;
   }
-  * { box-sizing: border-box; }
+
   body {
-    margin: 0;
     background: var(--bg);
     color: var(--ink);
     font-family: 'Inter', sans-serif;
-    font-size: 14.5px;
+    margin: 0;
+    padding: 40px 20px;
     -webkit-font-smoothing: antialiased;
   }
+
   .page {
-    max-width: 860px;
-    margin: 40px auto 80px;
     background: var(--paper);
-    border: 1px solid var(--line);
-    box-shadow: 0 1px 3px rgba(22,35,61,0.06);
+    max-width: 680px;
+    margin: 0 auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
   }
 
   .masthead {
-    padding: 44px 56px 28px;
-    border-bottom: 3px solid var(--navy);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 40px 48px 36px;
   }
   .masthead-label {
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.16em;
-    color: var(--gold);
+    letter-spacing: 1.5px;
     font-weight: 600;
-    margin-bottom: 10px;
+    color: var(--gold);
+    margin-bottom: 12px;
   }
   .masthead h1 {
     font-family: 'Source Serif 4', serif;
-    font-weight: 600;
-    font-size: 30px;
-    margin: 0 0 6px;
-    color: var(--ink);
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    line-height: 1.15;
   }
   .masthead .sub {
     font-size: 14px;
-    color: var(--ink-soft);
-    margin-bottom: 20px;
+    color: #A2ADB9;
+    margin-bottom: 28px;
   }
+
   .meta-row {
     display: flex;
     gap: 40px;
-    padding-top: 16px;
-    border-top: 1px solid var(--line);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding-top: 24px;
   }
-  .meta-item .meta-label {
-    font-size: 10.5px;
+  .meta-item {
+    flex: 1;
+  }
+  .meta-label {
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ink-soft);
-    margin-bottom: 3px;
+    letter-spacing: 1px;
+    color: #A2ADB9;
+    margin-bottom: 4px;
   }
-  .meta-item .meta-value {
-    font-size: 13.5px;
-    font-weight: 600;
+  .meta-value {
+    font-size: 14px;
+    font-weight: 500;
   }
 
-  .body { padding: 8px 56px 48px; }
+  .body {
+    padding: 8px 48px 48px;
+  }
 
-  .section { margin-top: 40px; }
+  .section {
+    margin-top: 40px;
+  }
   .section-heading {
     display: flex;
     align-items: baseline;
-    gap: 10px;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 10px;
-    margin-bottom: 18px;
-  }
-  .section-num {
-    font-family: 'Source Serif 4', serif;
-    font-size: 15px;
-    color: var(--gold);
-    font-weight: 600;
+    gap: 8px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 8px;
+    margin-bottom: 16px;
   }
   .section-heading h2 {
     font-family: 'Source Serif 4', serif;
-    font-size: 19px;
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .section-num {
+    font-family: 'Source Serif 4', serif;
+    font-size: 18px;
+    color: var(--gold);
     font-weight: 600;
     margin: 0;
   }
@@ -217,15 +229,15 @@
       <div class="meta-row">
         <div class="meta-item">
           <div class="meta-label">Report date</div>
-          <div class="meta-value">24 August 2026</div>
+          <div class="meta-value">26 August 2026</div>
         </div>
         <div class="meta-item">
           <div class="meta-label">Period covered</div>
-          <div class="meta-value">25 Jul 2026 – 24 August 2026</div>
+          <div class="meta-value">26 Jul 2026 – 26 August 2026</div>
         </div>
         <div class="meta-item">
           <div class="meta-label">Generated</div>
-          <div class="meta-value">01:26 UTC</div>
+          <div class="meta-value">07:18 UTC</div>
         </div>
       </div>
     </div>
@@ -235,7 +247,7 @@
       <div class="exec-summary">
         <h2>Executive Summary</h2>
         <ul>
-          <li>The subscriber base totals <b>6,432</b>, a net growth of <b>+1,730</b> over the trailing twelve months (2,140 joined, 410 unsubscribed).</li><li>In the current reporting period (since 25 Jul 2026), net subscriber change was <b>+164</b> (187 joined, 23 unsubscribed).</li><li>The most recent campaign, &ldquo;August Product Update & New Features&rdquo;, was sent to <b>4,791</b> recipients on 14 Aug 2026, 09:00, achieving a <b>41.7%</b> unique open rate and a <b>1.8%</b> bounce rate, within a healthy deliverability range.</li>
+          <li>The subscriber base totals <b>500</b>, a net growth of <b>+105</b> over the trailing twelve months (120 joined, 15 unsubscribed).</li><li>In the current reporting period (since 26 Jul 2026), net subscriber change was <b>+25</b> (30 joined, 5 unsubscribed).</li><li>The most recent campaign, &ldquo;Campaign via CSV&rdquo;, was sent to <b>99</b> recipients on 25 Aug 2026, 12:00, achieving a <b>47.4%</b> unique open rate and a <b>4.0%</b> bounce rate, slightly elevated and worth monitoring.</li>
         </ul>
       </div>
 
@@ -244,12 +256,12 @@
           <span class="section-num">1.</span>
           <h2>Campaign Performance</h2>
         </div>
-        <div class="campaign-subject">&ldquo;August Product Update & New Features&rdquo; — sent 14 Aug 2026, 09:00</div>
-        <table class="report-table"><tbody><tr><td>Recipients</td><td class="num">4,820</td></tr>
-<tr><td>Sends</td><td class="num">4,791</td></tr>
-<tr><td>Delivered</td><td class="num">4,707</td></tr>
-<tr><td>Bounces</td><td class="num">84 (1.8%)</td></tr>
-<tr><td>Unique opens</td><td class="num">1,962 (41.7%)</td></tr></tbody></table>
+        <div class="campaign-subject">&ldquo;Campaign via CSV&rdquo; — sent 25 Aug 2026, 12:00</div>
+        <table class="report-table"><tbody><tr><td>Recipients</td><td class="num">100</td></tr>
+<tr><td>Sends</td><td class="num">99</td></tr>
+<tr><td>Delivered</td><td class="num">95</td></tr>
+<tr><td>Bounces</td><td class="num">4 (4.0%)</td></tr>
+<tr><td>Unique opens</td><td class="num">45 (47.4%)</td></tr></tbody></table>
       </div>
 
       <div class="section">
@@ -257,43 +269,43 @@
           <span class="section-num">2.</span>
           <h2>Subscriber Growth</h2>
         </div>
-        <table class="report-table"><tbody><tr><td>Total subscribers</td><td class="num">6,432</td></tr>
-<tr><td>New — this period (since 25 Jul 2026)</td><td class="num">187</td></tr>
-<tr><td>Unsubscribed — this period (since 25 Jul 2026)</td><td class="num">23</td></tr>
-<tr><td>Net change — this period</td><td class="num">+164</td></tr>
-<tr><td>New — last 12 months (since 24 Aug 2025)</td><td class="num">2,140</td></tr>
-<tr><td>Unsubscribed — last 12 months (since 24 Aug 2025)</td><td class="num">410</td></tr>
-<tr><td>Net change — last 12 months</td><td class="num">+1,730</td></tr></tbody></table>
+        <table class="report-table"><tbody><tr><td>Total subscribers</td><td class="num">500</td></tr>
+<tr><td>New — this period (since 26 Jul 2026)</td><td class="num">30</td></tr>
+<tr><td>Unsubscribed — this period (since 26 Jul 2026)</td><td class="num">5</td></tr>
+<tr><td>Net change — this period</td><td class="num">+25</td></tr>
+<tr><td>New — last 12 months (since 25 Aug 2025)</td><td class="num">120</td></tr>
+<tr><td>Unsubscribed — last 12 months (since 25 Aug 2025)</td><td class="num">15</td></tr>
+<tr><td>Net change — last 12 months</td><td class="num">+105</td></tr></tbody></table>
 
         <div class="chart-wrap">
           
     <div class="hbar-row">
       <div class="hbar-head">
         <span class="hbar-label">This period</span>
-        <span class="hbar-range">since 25 Jul 2026</span>
+        <span class="hbar-range">since 26 Jul 2026</span>
       </div>
       <div class="hbar-track">
-        <div class="hbar-seg new" style="width:89.0%"></div>
-        <div class="hbar-seg unsub" style="width:11.0%"></div>
+        <div class="hbar-seg new" style="width:85.7%"></div>
+        <div class="hbar-seg unsub" style="width:14.3%"></div>
       </div>
       <div class="hbar-legend">
-        <span><i class="sw new"></i>New 187</span>
-        <span><i class="sw unsub"></i>Unsubscribed 23</span>
+        <span><i class="sw new"></i>New 30</span>
+        <span><i class="sw unsub"></i>Unsubscribed 5</span>
       </div>
     </div>
     
     <div class="hbar-row">
       <div class="hbar-head">
         <span class="hbar-label">Last 12 months</span>
-        <span class="hbar-range">since 24 Aug 2025</span>
+        <span class="hbar-range">since 25 Aug 2025</span>
       </div>
       <div class="hbar-track">
-        <div class="hbar-seg new" style="width:83.9%"></div>
-        <div class="hbar-seg unsub" style="width:16.099999999999994%"></div>
+        <div class="hbar-seg new" style="width:88.9%"></div>
+        <div class="hbar-seg unsub" style="width:11.1%"></div>
       </div>
       <div class="hbar-legend">
-        <span><i class="sw new"></i>New 2,140</span>
-        <span><i class="sw unsub"></i>Unsubscribed 410</span>
+        <span><i class="sw new"></i>New 120</span>
+        <span><i class="sw unsub"></i>Unsubscribed 15</span>
       </div>
     </div>
     
