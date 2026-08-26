@@ -302,79 +302,54 @@ def net_commentary(net: int) -> str:
     return "no net change"
 
 
-def render_bar_chart(period_new, period_unsub, annual_new, annual_unsub) -> str:
-    """Server-rendered grouped SVG bar chart, no client-side JS or chart library."""
-    width, height = 640, 300
-    margin = {"top": 24, "right": 24, "bottom": 52, "left": 56}
-    plot_w = width - margin["left"] - margin["right"]
-    plot_h = height - margin["top"] - margin["bottom"]
+def render_bar_chart(period_new, period_unsub, annual_new, annual_unsub, period_since: datetime, annual_since: datetime) -> str:
+    """Server-rendered horizontal stacked bar chart."""
+    period_total = period_new + period_unsub
+    if period_total > 0:
+        period_new_pct = (period_new / period_total) * 100
+        period_unsub_pct = (period_unsub / period_total) * 100
+    else:
+        period_new_pct = 0
+        period_unsub_pct = 0
 
-    values = [period_new, period_unsub, annual_new, annual_unsub]
-    max_val = max(values) if max(values) > 0 else 1
-    # Round the axis ceiling up to a tidy number for clean gridlines.
-    magnitude = 10 ** (len(str(max_val)) - 1)
-    axis_max = ((max_val // magnitude) + 1) * magnitude
+    annual_total = annual_new + annual_unsub
+    if annual_total > 0:
+        annual_new_pct = (annual_new / annual_total) * 100
+        annual_unsub_pct = (annual_unsub / annual_total) * 100
+    else:
+        annual_new_pct = 0
+        annual_unsub_pct = 0
 
-    groups = [
-        ("This period", period_new, period_unsub),
-        ("Last 12 months", annual_new, annual_unsub),
-    ]
-
-    group_w = plot_w / len(groups)
-    bar_w = group_w * 0.26
-    gap = group_w * 0.08
-
-    def y_for(v):
-        return margin["top"] + plot_h - (v / axis_max * plot_h)
-
-    # Gridlines + axis labels (4 bands)
-    gridlines = []
-    for i in range(5):
-        val = axis_max * i / 4
-        y = y_for(val)
-        gridlines.append(
-            f'<line x1="{margin["left"]}" y1="{y:.1f}" x2="{width - margin["right"]}" y2="{y:.1f}" '
-            f'stroke="#DCE1E8" stroke-width="1" />'
-            f'<text x="{margin["left"] - 10}" y="{y + 4:.1f}" text-anchor="end" '
-            f'font-size="11" fill="#6B7688" font-family="Inter, sans-serif">{fmt_num(round(val))}</text>'
-        )
-
-    bars = []
-    labels = []
-    for gi, (label, new_v, unsub_v) in enumerate(groups):
-        gx = margin["left"] + gi * group_w
-        cx = gx + group_w / 2
-
-        x_new = cx - gap / 2 - bar_w
-        x_unsub = cx + gap / 2
-
-        y_new = y_for(new_v)
-        y_unsub = y_for(unsub_v)
-
-        bars.append(
-            f'<rect x="{x_new:.1f}" y="{y_new:.1f}" width="{bar_w:.1f}" '
-            f'height="{margin["top"] + plot_h - y_new:.1f}" fill="#1F3A5F" rx="2" />'
-            f'<text x="{x_new + bar_w/2:.1f}" y="{y_new - 8:.1f}" text-anchor="middle" '
-            f'font-size="12" font-weight="600" fill="#1F3A5F" font-family="Inter, sans-serif">{fmt_num(new_v)}</text>'
-
-            f'<rect x="{x_unsub:.1f}" y="{y_unsub:.1f}" width="{bar_w:.1f}" '
-            f'height="{margin["top"] + plot_h - y_unsub:.1f}" fill="#8B3A3A" rx="2" />'
-            f'<text x="{x_unsub + bar_w/2:.1f}" y="{y_unsub - 8:.1f}" text-anchor="middle" '
-            f'font-size="12" font-weight="600" fill="#8B3A3A" font-family="Inter, sans-serif">{fmt_num(unsub_v)}</text>'
-        )
-        labels.append(
-            f'<text x="{cx:.1f}" y="{height - margin["bottom"] + 26:.1f}" text-anchor="middle" '
-            f'font-size="12.5" fill="#16233D" font-family="Source Serif 4, serif">{label}</text>'
-        )
-
-    baseline_y = margin["top"] + plot_h
     return f"""
-    <svg viewBox="0 0 {width} {height}" role="img" aria-label="New subscribers versus unsubscribes, this period and last 12 months">
-      {''.join(gridlines)}
-      <line x1="{margin['left']}" y1="{baseline_y:.1f}" x2="{width - margin['right']}" y2="{baseline_y:.1f}" stroke="#16233D" stroke-width="1.4" />
-      {''.join(bars)}
-      {''.join(labels)}
-    </svg>
+    <div class="hbar-row">
+      <div class="hbar-head">
+        <span class="hbar-label">This period</span>
+        <span class="hbar-range">since {period_since.strftime("%d %b %Y")}</span>
+      </div>
+      <div class="hbar-track">
+        <div class="hbar-seg new" style="width:{period_new_pct:.1f}%"></div>
+        <div class="hbar-seg unsub" style="width:{period_unsub_pct:.1f}%"></div>
+      </div>
+      <div class="hbar-legend">
+        <span><i class="sw new"></i>New {fmt_num(period_new)}</span>
+        <span><i class="sw unsub"></i>Unsubscribed {fmt_num(period_unsub)}</span>
+      </div>
+    </div>
+    
+    <div class="hbar-row">
+      <div class="hbar-head">
+        <span class="hbar-label">Last 12 months</span>
+        <span class="hbar-range">since {annual_since.strftime("%d %b %Y")}</span>
+      </div>
+      <div class="hbar-track">
+        <div class="hbar-seg new" style="width:{annual_new_pct:.1f}%"></div>
+        <div class="hbar-seg unsub" style="width:{annual_unsub_pct:.1f}%"></div>
+      </div>
+      <div class="hbar-legend">
+        <span><i class="sw new"></i>New {fmt_num(annual_new)}</span>
+        <span><i class="sw unsub"></i>Unsubscribed {fmt_num(annual_unsub)}</span>
+      </div>
+    </div>
     """
 
 
@@ -425,7 +400,7 @@ def render_html(campaign: dict, subs: dict, period_since: datetime, annual_since
         ("Net change — last 12 months", signed(subs["annual_net"])),
     ]
 
-    chart_svg = render_bar_chart(subs["period_new"], subs["period_unsub"], subs["annual_new"], subs["annual_unsub"])
+    chart_svg = render_bar_chart(subs["period_new"], subs["period_unsub"], subs["annual_new"], subs["annual_unsub"], period_since, annual_since)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -576,16 +551,41 @@ def render_html(campaign: dict, subs: dict, period_since: datetime, annual_since
     margin: -4px 0 16px;
   }}
 
-  .chart-wrap {{ margin-top: 8px; }}
-  .chart-wrap svg {{ width: 100%; height: auto; display: block; }}
-  .chart-legend {{
+  .chart-wrap {{ margin-top: 20px; }}
+  .hbar-row {{ margin-bottom: 22px; }}
+  .hbar-row:last-child {{ margin-bottom: 0; }}
+  .hbar-head {{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }}
+  .hbar-label {{
+    font-family: 'Source Serif 4', serif;
+    font-size: 14px;
+    font-weight: 600;
+  }}
+  .hbar-range {{
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }}
+  .hbar-track {{
+    display: flex;
+    height: 14px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--line);
+  }}
+  .hbar-seg.new {{ background: var(--navy); }}
+  .hbar-seg.unsub {{ background: var(--burgundy); }}
+  .hbar-legend {{
     display: flex;
     gap: 24px;
-    margin-top: 10px;
+    margin-top: 8px;
     font-size: 12px;
     color: var(--ink-soft);
   }}
-  .chart-legend .sw {{
+  .sw {{
     display: inline-block;
     width: 10px; height: 10px;
     border-radius: 2px;
@@ -661,10 +661,6 @@ def render_html(campaign: dict, subs: dict, period_since: datetime, annual_since
 
         <div class="chart-wrap">
           {chart_svg}
-          <div class="chart-legend">
-            <span><i class="sw new"></i>New subscribers</span>
-            <span><i class="sw unsub"></i>Unsubscribed</span>
-          </div>
         </div>
       </div>
 
