@@ -644,7 +644,8 @@ def main():
         subs_summary, period_since, annual_since = res
         now = datetime.now(timezone.utc)
 
-        campaigns_list = load_campaigns_in_period(campaigns_file, period_since)
+        campaign_since = now - timedelta(days=31)
+        campaigns_list = load_campaigns_in_period(campaigns_file, campaign_since)
         if not campaigns_list:
             # Fallback to the latest campaign in CSV to avoid an empty list
             latest = load_latest_campaign(campaigns_file)

@@ -373,8 +373,14 @@ def main():
     token = os.environ.get("SENDER_API_TOKEN", "").strip()
     client = SenderClient(token)
 
-    print(f"Fetching campaigns sent since {period_since.date()}...")
-    campaigns = get_campaigns_in_period(client, period_since)
+    campaign_days = args.days if args.days else 31
+    campaign_since = now - timedelta(days=campaign_days)
+
+    print(f"Fetching campaigns sent since {campaign_since.date()}...")
+    campaigns = get_campaigns_in_period(client, campaign_since)
+    print("DEBUG: Fetched campaigns (id, sent_time):")
+    for c in campaigns:
+        print(f"  {c.get('id')} | {c.get('sent_time')}")
     if not campaigns:
         print("No campaigns found in the current period. Fetching the latest sent campaign as fallback...")
         latest = get_latest_sent_campaign(client)
