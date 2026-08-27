@@ -96,6 +96,36 @@ def load_latest_campaign(csv_path: Path) -> dict | None:
     return None
 
 
+def load_campaigns_in_period(csv_path: Path, since: datetime) -> list[dict]:
+    if not csv_path.exists() or csv_path.stat().st_size == 0:
+        return []
+    campaigns = []
+    try:
+        with open(csv_path, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                sent_time = parse_dt(row.get("sent_time"))
+                if sent_time and sent_time >= since:
+                    campaigns.append({
+                        "subject": row.get("subject", "(untitled campaign)"),
+                        "sent_time": row.get("sent_time"),
+                        "recipient_count": int(row.get("recipient_count", 0)),
+                        "sent_count": int(row.get("sent_count", 0)),
+                        "delivered": int(row.get("delivered", 0)),
+                        "bounces": int(row.get("bounces", 0)),
+                        "unique_opens": int(row.get("unique_opens", 0)),
+                        "clicks": int(row.get("clicks", 0)),
+                        "open_rate": float(row.get("open_rate", 0)),
+                        "bounce_rate": float(row.get("bounce_rate", 0))
+                    })
+    except Exception as e:
+        print(f"Error reading campaigns from CSV: {e}", file=sys.stderr)
+    
+    # Sort descending by sent_time
+    campaigns.sort(key=lambda c: c["sent_time"] or "", reverse=True)
+    return campaigns
+
+
 def load_latest_subscribers(csv_path: Path) -> tuple[dict, datetime, datetime] | None:
     if not csv_path.exists() or csv_path.stat().st_size == 0:
         return None
@@ -214,11 +244,31 @@ def data_table(rows) -> str:
     return f'<table class="report-table"><tbody>{body}</tbody></table>'
 
 
-def render_html(campaign: dict, subs: dict, period_since: datetime, annual_since: datetime, generated_at: datetime) -> str:
+def render_html(campaigns: list[dict], subs: dict, period_since: datetime, annual_since: datetime, generated_at: datetime) -> str:
     period_label = period_since.strftime("%d %b %Y")
     annual_label = annual_since.strftime("%d %b %Y")
     generated_label = generated_at.strftime("%d %B %Y")
     generated_time = generated_at.strftime("%H:%M UTC")
+
+    campaign_bullet = ""
+    if not campaigns:
+        campaign_bullet = "No campaigns were sent during this period."
+    elif len(campaigns) == 1:
+        campaign_bullet = (
+            f"The campaign, &ldquo;{campaigns[0]['subject']}&rdquo;, was sent to "
+            f"<b>{fmt_num(campaigns[0]['sent_count'])}</b> recipients on {fmt_date(campaigns[0]['sent_time'])}, achieving a "
+            f"<b>{campaigns[0]['open_rate']}%</b> unique open rate and a <b>{campaigns[0]['bounce_rate']}%</b> bounce rate, "
+            f"{bounce_commentary(campaigns[0]['bounce_rate'])}."
+        )
+    else:
+        total_sends = sum(c['sent_count'] for c in campaigns)
+        avg_open = round(sum(c['open_rate'] for c in campaigns) / len(campaigns), 1)
+        avg_bounce = round(sum(c['bounce_rate'] for c in campaigns) / len(campaigns), 1)
+        campaign_bullet = (
+            f"During this period, <b>{len(campaigns)}</b> campaigns were sent, reaching a total of "
+            f"<b>{fmt_num(total_sends)}</b> subscribers. The average unique open rate "
+            f"was <b>{avg_open}%</b>, with an average bounce rate of <b>{avg_bounce}%</b>."
+        )
 
     exec_bullets = [
         f"The subscriber base totals <b>{fmt_num(subs['total_subscribers'])}</b>, a {net_commentary(subs['annual_net'])} "
@@ -229,19 +279,32 @@ def render_html(campaign: dict, subs: dict, period_since: datetime, annual_since
         f"<b>{signed(subs['period_net'])}</b> ({fmt_num(subs['period_new'])} joined, "
         f"{fmt_num(subs['period_unsub'])} unsubscribed).",
 
-        f"The most recent campaign, &ldquo;{campaign['subject']}&rdquo;, was sent to "
-        f"<b>{fmt_num(campaign['sent_count'])}</b> recipients on {fmt_date(campaign['sent_time'])}, achieving a "
-        f"<b>{campaign['open_rate']}%</b> unique open rate and a <b>{campaign['bounce_rate']}%</b> bounce rate, "
-        f"{bounce_commentary(campaign['bounce_rate'])}.",
+        campaign_bullet,
     ]
 
-    campaign_rows = [
-        ("Recipients", fmt_num(campaign["recipient_count"])),
-        ("Sends", fmt_num(campaign["sent_count"])),
-        ("Delivered", fmt_num(campaign["delivered"])),
-        ("Bounces", f"{fmt_num(campaign['bounces'])} ({campaign['bounce_rate']}%)"),
-        ("Unique opens", f"{fmt_num(campaign['unique_opens'])} ({campaign['open_rate']}%)"),
-    ]
+    campaigns_blocks = []
+    if not campaigns:
+        campaigns_blocks.append('<div class="campaign-item"><p>No campaigns sent during this period.</p></div>')
+    else:
+        for i, c in enumerate(campaigns):
+            campaign_rows = [
+                ("Recipients", fmt_num(c["recipient_count"])),
+                ("Sends", fmt_num(c["sent_count"])),
+                ("Delivered", fmt_num(c["delivered"])),
+                ("Bounces", f"{fmt_num(c['bounces'])} ({c['bounce_rate']}%)"),
+                ("Unique opens", f"{fmt_num(c['unique_opens'])} ({c['open_rate']}%)"),
+            ]
+            border_style = "border-bottom: 1px dashed var(--line); padding-bottom: 24px; margin-bottom: 32px;" if i < len(campaigns) - 1 else ""
+            block = f"""
+            <div class="campaign-item" style="{border_style}">
+              <div class="campaign-subject" style="font-weight: 600; margin-bottom: 12px;">
+                &ldquo;{c['subject']}&rdquo; — sent {fmt_date(c['sent_time'])}
+              </div>
+              {data_table(campaign_rows)}
+            </div>
+            """
+            campaigns_blocks.append(block)
+    campaigns_html = "\n".join(campaigns_blocks)
 
     subscriber_rows = [
         ("Total subscribers", fmt_num(subs["total_subscribers"])),
@@ -513,8 +576,7 @@ def render_html(campaign: dict, subs: dict, period_since: datetime, annual_since
           <span class="section-num">1.</span>
           <h2>Campaign Performance</h2>
         </div>
-        <div class="campaign-subject">&ldquo;{campaign['subject']}&rdquo; — sent {fmt_date(campaign['sent_time'])}</div>
-        {data_table(campaign_rows)}
+        {campaigns_html}
       </div>
 
       <div class="section">
@@ -562,6 +624,7 @@ def main():
     if args.sample:
         print("Generating page from SAMPLE data...")
         campaign_summary, subs_summary = sample_data()
+        campaigns_list = [campaign_summary]
         now = datetime.now(timezone.utc)
         period_since = now - timedelta(days=30)
         annual_since = now - timedelta(days=365)
@@ -573,16 +636,25 @@ def main():
             print(f"Error: CSV data files not found in {data_dir}. Run scripts/fetch_data.py first, or run with --sample.", file=sys.stderr)
             sys.exit(1)
 
-        campaign_summary = load_latest_campaign(campaigns_file)
         res = load_latest_subscribers(subscribers_file)
-        if not campaign_summary or not res:
-            print("Error: Could not load data from CSV files. Ensure they are populated.", file=sys.stderr)
+        if not res:
+            print("Error: Could not load subscriber data from CSV file.", file=sys.stderr)
             sys.exit(1)
 
         subs_summary, period_since, annual_since = res
         now = datetime.now(timezone.utc)
 
-    html = render_html(campaign_summary, subs_summary, period_since, annual_since, now)
+        campaigns_list = load_campaigns_in_period(campaigns_file, period_since)
+        if not campaigns_list:
+            # Fallback to the latest campaign in CSV to avoid an empty list
+            latest = load_latest_campaign(campaigns_file)
+            campaigns_list = [latest] if latest else []
+
+        if not campaigns_list:
+            print("Error: Could not load campaign data from CSV file.", file=sys.stderr)
+            sys.exit(1)
+
+    html = render_html(campaigns_list, subs_summary, period_since, annual_since, now)
 
     out_path = output_dir / "index.html"
     out_path.write_text(html, encoding="utf-8")

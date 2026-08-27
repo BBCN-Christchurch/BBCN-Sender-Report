@@ -24,7 +24,7 @@ except ImportError:
 
 BASE_URL = "https://api.sender.net/v2"
 DATE_FMT = "%Y-%m-%d %H:%M:%S"
-DEFAULT_LOOKBACK_DAYS = 30
+DEFAULT_LOOKBACK_DAYS = 31
 ANNUAL_DAYS = 365
 
 
@@ -143,6 +143,30 @@ def get_latest_sent_campaign(client: SenderClient):
     latest = campaigns[0]
     detail = client.get_campaign_detail(latest["id"])
     return detail or latest
+
+
+def get_campaigns_in_period(client: SenderClient, since: datetime) -> list:
+    campaigns = client.get_campaigns(status="SENT")
+    if not campaigns:
+        return []
+    
+    period_campaigns = []
+    for c in campaigns:
+        sent_time = parse_dt(c.get("sent_time"))
+        if sent_time and sent_time >= since:
+            period_campaigns.append(c)
+            
+    # Sort by sent_time descending
+    period_campaigns.sort(key=lambda c: c.get("sent_time") or c.get("modified") or "", reverse=True)
+    
+    # Fetch details for each
+    detailed_campaigns = []
+    for c in period_campaigns:
+        print(f"  Fetching details for campaign: {c.get('subject') or c.get('title') or c['id']}...")
+        detail = client.get_campaign_detail(c["id"])
+        detailed_campaigns.append(detail or c)
+        
+    return detailed_campaigns
 
 
 def build_campaign_summary(client: SenderClient, campaign: dict) -> dict:
@@ -349,14 +373,21 @@ def main():
     token = os.environ.get("SENDER_API_TOKEN", "").strip()
     client = SenderClient(token)
 
-    print("Fetching latest sent campaign...")
-    latest = get_latest_sent_campaign(client)
-    if not latest:
+    print(f"Fetching campaigns sent since {period_since.date()}...")
+    campaigns = get_campaigns_in_period(client, period_since)
+    if not campaigns:
+        print("No campaigns found in the current period. Fetching the latest sent campaign as fallback...")
+        latest = get_latest_sent_campaign(client)
+        if latest:
+            campaigns = [latest]
+            
+    if not campaigns:
         print("No sent campaigns found on this account.", file=sys.stderr)
         sys.exit(1)
-    
-    campaign_summary = build_campaign_summary(client, latest)
-    save_campaign_to_csv(campaigns_file, campaign_summary, latest["id"])
+        
+    for c in campaigns:
+        campaign_summary = build_campaign_summary(client, c)
+        save_campaign_to_csv(campaigns_file, campaign_summary, c["id"])
 
     print(f"Fetching subscriber data (period since {period_since.date()}, annual since {annual_since.date()})...")
     subs_summary = build_subscriber_summary(client, period_since, annual_since)
