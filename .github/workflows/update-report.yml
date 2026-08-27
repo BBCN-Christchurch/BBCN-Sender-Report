@@ -28,6 +28,16 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Debug secret presence
+        env:
+          SENDER_API_TOKEN: ${{ secrets.SENDER_API_TOKEN }}
+        run: |
+          if [ -z "$SENDER_API_TOKEN" ]; then
+            echo "DEBUG: SENDER_API_TOKEN is empty!"
+          else
+            echo "DEBUG: SENDER_API_TOKEN is set (length: ${#SENDER_API_TOKEN})"
+          fi
+
       - name: Fetch latest data
         env:
           SENDER_API_TOKEN: ${{ secrets.SENDER_API_TOKEN }}
