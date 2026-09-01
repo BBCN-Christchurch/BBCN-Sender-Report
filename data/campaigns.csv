@@ -1,4 +1,4 @@
 campaign_id,subject,sent_time,recipient_count,sent_count,delivered,bounces,unique_opens,clicks,open_rate,bounce_rate
 12345,Campaign via CSV,2026-08-25 12:00:00,100,99,95,4,45,12,47.4,4.0
-4xREWx,BBCN Connect - Call for Items,2026-08-19 22:01:03,536,536,531,5,130,2,24.5,0.9
+4xREWx,BBCN Connect - Call for Items,2026-08-19 22:01:03,536,536,531,5,131,2,24.7,0.9
 zpKQ6y,BBCN Connect - August 2026,2026-08-05 13:55:03,541,541,529,12,233,23,44.0,2.2
