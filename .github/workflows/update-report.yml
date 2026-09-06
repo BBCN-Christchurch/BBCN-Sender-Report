@@ -2,8 +2,8 @@ name: Update Sender.net Report
 
 on:
   schedule:
-    # 09:00 UTC on the 1st of every month
-    - cron: "0 9 1 * *"
+    # 09:00 UTC on the 10th of every month
+    - cron: "0 9 10 * *"
   workflow_dispatch: {}   # adds a manual "Run workflow" button in the Actions tab
 
 permissions:
